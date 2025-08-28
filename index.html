@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Algebraisk faktorisering – Demo & Øving</title>
+<title>Primfaktorisering – Canvas Demo & Øving</title>
 <style>
   :root{
     --bg:#000; --panel:#0c0c0c; --ink:#fff; --sub:#b3b3b3;
     --accent:#42ff9e; --accent2:#59caff; --warn:#ffd166; --err:#ff4d4d;
-    --border:#222;
   }
   *{box-sizing:border-box}
   body{margin:0; padding:28px; background:var(--bg); color:var(--ink);
        font:17px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;}
   h1{font-size:clamp(24px,4vw,40px); margin:0 0 6px}
   .sub{color:var(--sub); margin:0 0 18px}
+
   .tabs{display:flex; gap:10px; margin:12px 0 18px}
-  .tab{border:1px solid var(--border); background:#0f0f0f; color:var(--ink);
+  .tab{border:1px solid #222; background:#0f0f0f; color:var(--ink);
        padding:12px 16px; border-radius:14px; cursor:pointer; font-weight:600}
   .tab[aria-selected="true"]{outline:2px solid var(--accent2); background:#101820}
   .panel{display:none}
@@ -24,166 +24,387 @@
 
   .controls{display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:12px 0 18px}
   label{display:flex; flex-direction:column; gap:6px; font-size:14px}
-  input[type="text"], input[type="number"]{
-    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
-    padding:10px 12px; min-width:200px;
-  }
-  select{
-    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
-    padding:10px 12px;
+  input[type="number"], input[type="range"]{
+    background:#0f0f0f; color:var(--ink); border:1px solid #222; border-radius:12px;
+    padding:10px 12px; min-width:150px;
   }
   button{
-    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
-    padding:10px 14px; cursor:pointer; font-weight:600
+    background:#0f0f0f; color:var(--ink); border:1px solid #222; border-radius:12px;
+    padding:10px 14px; cursor:pointer; font-weight:600;
   }
   button.primary{background:var(--accent2); color:#001018; border-color:transparent}
   button.good{background:var(--accent); color:#00180a; border-color:transparent}
   button.warn{background:var(--warn); color:#2b2000; border-color:transparent}
   button:disabled{opacity:.55; cursor:not-allowed}
+  .grow{flex:1}
 
-  .card{background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px}
-  .big{font-size:clamp(22px,3.4vw,34px); font-weight:700; letter-spacing:.2px}
-  .expr{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace}
+  .card{background:var(--panel); border:1px solid #222; border-radius:18px; padding:18px}
 
-  .steps{display:flex; flex-direction:column; gap:10px; margin-top:10px}
-  .step{padding:12px; border:1px dashed #2a2a2a; border-radius:12px}
-  .hint{color:var(--sub); font-size:14px; margin-top:6px}
+  .chips{display:flex; flex-wrap:wrap; gap:10px}
+  .chip{background:#0f0f0f; border:1px solid #222; border-radius:999px; padding:8px 12px; cursor:pointer}
+  .chip:hover{outline:2px solid var(--accent2)}
   .status{margin-top:10px; font-size:16px}
   .status .ok{color:var(--accent)}
   .status .bad{color:var(--err)}
-  .row{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
-  .grow{flex:1}
-
-  .chips{display:flex; flex-wrap:wrap; gap:10px}
-  .chip{background:#0f0f0f; border:1px solid var(--border); border-radius:999px; padding:8px 12px; cursor:pointer}
-  .chip:hover{outline:2px solid var(--accent2)}
+  .hint{color:var(--sub); font-size:14px}
+  canvas{width:100%; height:auto; display:block; background:#0b0b0b; border-radius:12px}
 </style>
 </head>
 <body>
-  <h1>Algebraisk faktorisering</h1>
-  <div class="sub">Høy-kontrast demo for tavle, og øving der elevene velger riktig metode og fullfører stegene. Alt er i én variabel <b>x</b> med heltallskoeffisienter.</div>
+  <h1>Primtallsfaktorisering (Canvas)</h1>
+  <div class="sub">Stolpemetoden tegnes på <b>canvas</b>. Demo krever primfaktorer ≤ 13. Øving krever at eleven velger laveste primfaktor.</div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo (lærer)</button>
-    <button class="tab" id="tab-prac" role="tab" aria-selected="false" aria-controls="panel-prac">Øving (elev)</button>
+    <button id="tab-demo" class="tab" role="tab" aria-selected="true" aria-controls="panel-demo">Demo (lærer)</button>
+    <button id="tab-prac" class="tab" role="tab" aria-selected="false" aria-controls="panel-prac">Øving (elev)</button>
   </div>
 
   <!-- DEMO -->
   <section id="panel-demo" class="panel" aria-hidden="false" aria-labelledby="tab-demo">
     <div class="controls">
-      <label>Uttrykk (x)
-        <input id="demoExpr" type="text" value="6x^2 + 9x">
+      <label>Starttall (kun faktorer ≤ 13 i demo)
+        <input id="demoN" type="number" min="2" step="1" value="130">
       </label>
+      <button id="demoRand" class="good">Tilfeldig gyldig</button>
       <button id="demoStart" class="primary">Start demo</button>
-      <button id="demoStep">Neste steg</button>
-      <button id="demoFinish">Kjør til slutt</button>
+      <button id="demoReset">Nullstill</button>
       <div class="grow"></div>
-      <label>Eksempler
-        <select id="demoExamples">
-          <option value="6x^2 + 9x">Felles faktor: 6x² + 9x</option>
-          <option value="9x^2 - 16">Forskjell av kvadrater: 9x² - 16</option>
-          <option value="x^2 - 6x + 9">Fullstendig kvadrat: x² - 6x + 9</option>
-          <option value="6x^2 + 11x + 3">Trinomial: 6x² + 11x + 3</option>
-          <option value="8x^2 - 2x - 3">Trinomial: 8x² - 2x - 3</option>
-        </select>
+      <label style="min-width:230px">Zoom
+        <input id="demoZoom" type="range" min="80" max="170" value="120">
       </label>
+      <button id="demoStep">Neste</button>
+      <button id="demoAuto">Auto ▶</button>
+      <button id="demoPause" disabled>Pause ⏸</button>
+      <button id="demoFinish">Til slutt</button>
     </div>
-
     <div class="card">
-      <div class="big expr" id="demoNow"></div>
-      <div class="steps" id="demoSteps"></div>
-      <div class="status" id="demoStatus"></div>
-      <div class="hint">Rekkefølge i demo: <b>1)</b> Trekk ut felles faktor hvis mulig. <b>2)</b> Sjekk mønster: forskjell av kvadrater, fullstendig kvadrat eller trinom (ac-metoden).</div>
+      <canvas id="demoCanvas"></canvas>
+      <div id="demoStatus" class="status"></div>
+      <div class="hint">Algoritmen sjekker 2, 3, 5, 7, 11, 13, … I demo sikrer vi at tallet ikke har primfaktor &gt; 13.</div>
     </div>
   </section>
 
   <!-- ØVING -->
   <section id="panel-prac" class="panel" aria-hidden="true" aria-labelledby="tab-prac">
     <div class="controls">
-      <label>Velg type
-        <select id="mode">
-          <option value="mixed">Blandet (anbefalt)</option>
-          <option value="gcf">Felles faktor</option>
-          <option value="dSquares">Forskjell av kvadrater</option>
-          <option value="pSquare">Fullstendig kvadrat</option>
-          <option value="trinomial">Trinomial (ax²+bx+c)</option>
-        </select>
+      <label>Nytt tall
+        <input id="pracN" type="number" min="2" step="1" value="130">
       </label>
-      <button id="newTask" class="primary">Ny oppgave</button>
+      <button id="pracRand">Tilfeldig tall</button>
+      <button id="pracStart" class="primary">Start øving</button>
+      <button id="pracReset">Nullstill</button>
       <div class="grow"></div>
       <div>Poeng: <span id="score">0</span></div>
     </div>
 
     <div class="card">
-      <div class="big expr" id="qExpr"></div>
+      <canvas id="pracCanvas"></canvas>
+      <div id="pracStatus" class="status"></div>
+      <div class="hint">Velg laveste primtall som deler resttallet. Du kan også skrive inn et tall.</div>
+      <div id="choices" class="chips"></div>
 
-      <div class="step">
-        <div style="font-weight:700; margin-bottom:6px">1) Velg riktig metode</div>
-        <div class="chips" id="methodChoices"></div>
-        <div class="status" id="methodStatus"></div>
+      <div class="controls">
+        <label>Skriv eget primtall
+          <input id="customPrime" type="number" min="2" step="1" />
+        </label>
+        <button id="checkCustom">Sjekk</button>
+        <button id="giveHint" class="warn">Hint</button>
+        <button id="giveAns" class="good">Vis riktig</button>
       </div>
+    </div>
 
-      <div class="step" id="stepInputs" style="display:none">
-        <div style="font-weight:700; margin-bottom:6px">2) Fullfør steget</div>
-        <!-- GCF -->
-        <div id="gcfFields" class="row" style="display:none">
-          <label>Koeffisient (GCF)
-            <input id="gcfC" type="number" step="1" value="1">
-          </label>
-          <label>Eksponent på x i GCF
-            <input id="gcfK" type="number" step="1" value="0">
-          </label>
-          <button id="gcfCheck">Trekk ut</button>
-        </div>
-        <!-- Difference of squares -->
-        <div id="dsFields" class="row" style="display:none">
-          <label>√(første koeff.)
-            <input id="dsA" type="number" step="1" value="1">
-          </label>
-          <label>Halv eksponent (første)
-            <input id="dsEa" type="number" step="1" value="1">
-          </label>
-          <label>√(andre koeff.)
-            <input id="dsB" type="number" step="1" value="1">
-          </label>
-          <label>Halv eksponent (andre)
-            <input id="dsEb" type="number" step="1" value="0">
-          </label>
-          <button id="dsCheck">(A−B)(A+B)</button>
-        </div>
-        <!-- Perfect square -->
-        <div id="psFields" class="row" style="display:none">
-          <label>Faktor ved x i (sx ± t)²
-            <input id="psS" type="number" step="1" value="1">
-          </label>
-          <label>Konstant i (sx ± t)²
-            <input id="psT" type="number" step="1" value="1">
-          </label>
-          <label>Tegn
-            <select id="psSign"><option value="+">+</option><option value="-">−</option></select>
-          </label>
-          <button id="psCheck">Sjekk</button>
-        </div>
-        <!-- Trinomial -->
-        <div id="triFields" class="row" style="display:none">
-          <label>Faktor 1 (m)
-            <input id="m1" type="number" step="1" value="1">
-          </label>
-          <label>Konstant 1 (p)
-            <input id="p1" type="number" step="1" value="1">
-          </label>
-          <label>Faktor 2 (n)
-            <input id="m2" type="number" step="1" value="1">
-          </label>
-          <label>Konstant 2 (q)
-            <input id="p2" type="number" step="1" value="1">
-          </label>
-          <button id="triCheck">(m x + p)(n x + q)</button>
-          <button id="triHint" class="warn">Hint (ac-metoden)</button>
-        </div>
+    <div id="pracResult" class="card"></div>
+  </section>
 
-        <div class="status" id="stepStatus"></div>
-      </div>
+<script>
+/* ====== Mattehjelpere ====== */
+const sievePrimes = (limit=100000)=>{
+  const n=Math.max(2,limit|0), a=new Uint8Array(n+1), out=[];
+  for(let i=2;i<=n;i++){ if(!a[i]){ out.push(i); if(i*i<=n) for(let j=i*i;j<=n;j+=i) a[j]=1; } }
+  return out;
+};
+const smallestDiv = (n)=>{
+  if(n%2===0) return 2;
+  let p=3, cap=Math.floor(Math.sqrt(n));
+  while(p<=cap){ if(n%p===0) return p; p+=2; }
+  return n;
+};
+const hasPrimeFactorAbove = (n,k)=>{
+  while(n>1){
+    const d=smallestDiv(n);
+    if(d>k) return true;
+    n=(d===n)?1:n/d;
+  }
+  return false;
+};
+const compress = (arr)=>{
+  const m=new Map(); arr.forEach(x=>m.set(x,(m.get(x)||0)+1));
+  return [...m.entries()].map(([p,e])=> e>1?`${p}^${e}`:`${p}`).join(' · ');
+};
 
-      <div class="status" id="finalStatus" style="margin-top:12px"></div>
-      <div class="hint">Tips: Skriv uttrykk som <span class="expr">6x^2 + 11x + 3</span>, <span class="expr">9x^2 - 16</span> osv. Bruk <span class="expr">
+/* ====== Canvas tegning av “stolpemetoden” ====== */
+function drawLadder(canvas, left, right, scale=1.0){
+  // High-DPI
+  const dpr = window.devicePixelRatio || 1;
+  const pad  = 20*scale;                 // ytre padding
+  const rowH = 46*scale;                 // høyde pr rad
+  const barW = 6*scale;                  // bredde på stolpen
+  const rightColW = 170*scale;           // bredde for høyre kolonne
+  const fontPx = Math.round(34*scale);   // stor font
+  const rows = Math.max(left.length, right.length);
+
+  // bredde = venstre (auto) + bar + høyre
+  const cssW = Math.min(760*scale, canvas.parentElement.clientWidth - 10);
+  const cssH = pad*2 + rows*rowH;
+
+  canvas.style.width  = cssW + "px";
+  canvas.style.height = cssH + "px";
+  canvas.width  = Math.round(cssW*dpr);
+  canvas.height = Math.round(cssH*dpr);
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+
+  // Farger/typografi
+  ctx.fillStyle = "#0b0b0b";
+  ctx.fillRect(0,0,cssW,cssH);
+
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 1;
+
+  // Skriv tall – finn nødvendig venstre bredde ved å måle tekst
+  ctx.font = `600 ${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace`;
+  ctx.fillStyle = "#ffffff";
+  const measureText = (s)=> ctx.measureText(String(s)).width;
+  let leftMaxW = 0;
+  for(const v of left) leftMaxW = Math.max(leftMaxW, measureText(v||""));
+
+  const leftColW = Math.max(leftMaxW + 24*scale, (cssW - rightColW - barW - pad*2)*0.9);
+  const xLeft  = pad;
+  const xBar   = xLeft + leftColW;
+  const xRight = xBar + barW;
+
+  // Vertikal stolpe
+  ctx.fillStyle = "#ffffff20";
+  ctx.fillRect(xBar, pad*.7, barW, cssH - pad*1.4);
+
+  // Rader + tall
+  for(let r=0;r<rows;r++){
+    const yTop = pad + r*rowH;
+    // bunnlinje
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.beginPath();
+    ctx.moveTo(xLeft, yTop+rowH);
+    ctx.lineTo(xRight + rightColW, yTop+rowH);
+    ctx.stroke();
+
+    // venstre tall (høyrejustert)
+    const L = left[r]; if(L!==undefined){
+      const tw = measureText(L);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(L, xBar - 10*scale - tw, yTop + rowH*0.72);
+    }
+    // høyre tall (venstrejustert)
+    const R = right[r]; if(R!==undefined){
+      ctx.fillStyle = "#fff";
+      ctx.fillText(R, xRight + 10*scale, yTop + rowH*0.72);
+    }
+  }
+}
+
+/* ====== Felles logikk for demo/øving ====== */
+function makeLadderArrays(n){
+  const left=[n], right=[];
+  let cur=n;
+  while(cur>1){
+    const d=smallestDiv(cur);
+    right.push(d);
+    if(d===cur){ if(left[left.length-1]!==d) left.push(d); cur=1; }
+    else { cur/=d; left.push(cur); }
+  }
+  return {left,right};
+}
+const randomValidDemoNumber = ()=>{
+  const primes=[2,3,5,7,11,13];
+  const terms = 2 + Math.floor(Math.random()*4); // 2–5 faktorer
+  let n=1;
+  for(let i=0;i<terms;i++){
+    const p=primes[Math.floor(Math.random()*primes.length)];
+    n*=p;
+    if(n>99999) break;
+  }
+  return Math.max(2,n);
+};
+
+/* ====== Tabs ====== */
+const tabDemo=document.getElementById('tab-demo');
+const tabPrac=document.getElementById('tab-prac');
+const panelDemo=document.getElementById('panel-demo');
+const panelPrac=document.getElementById('panel-prac');
+function switchTab(which){
+  const isDemo = which==='demo';
+  tabDemo.setAttribute('aria-selected', isDemo);
+  tabPrac.setAttribute('aria-selected', !isDemo);
+  panelDemo.setAttribute('aria-hidden', !isDemo);
+  panelPrac.setAttribute('aria-hidden', isDemo);
+  pauseAuto();
+}
+tabDemo.addEventListener('click',()=>switchTab('demo'));
+tabPrac.addEventListener('click',()=>switchTab('prac'));
+
+/* ====== DEMO ====== */
+const demoCanvas = document.getElementById('demoCanvas');
+const demoN = document.getElementById('demoN');
+const demoRand = document.getElementById('demoRand');
+const demoStart= document.getElementById('demoStart');
+const demoReset= document.getElementById('demoReset');
+const demoStep = document.getElementById('demoStep');
+const demoAuto = document.getElementById('demoAuto');
+const demoPause= document.getElementById('demoPause');
+const demoFinish=document.getElementById('demoFinish');
+const demoStatus=document.getElementById('demoStatus');
+const demoZoom=document.getElementById('demoZoom');
+
+let demo={orig:130, cur:130, left:[130], right:[], scale:1.2, timer:null};
+
+function resetDemo(msg="Klar."){
+  const n=+demoN.value||130;
+  demo={orig:n, cur:n, left:[n], right:[], scale:(+demoZoom.value)/100, timer:null};
+  drawLadder(demoCanvas, demo.left, demo.right, demo.scale);
+  demoStatus.textContent=msg;
+}
+function ensureDemoValid(){
+  let n=+demoN.value||130;
+  if(hasPrimeFactorAbove(n,13)){
+    n=randomValidDemoNumber();
+    demoN.value=n;
+    resetDemo(`Tallet hadde en faktor > 13. Bytter til gyldig: ${n}.`);
+  }else{
+    resetDemo("Klar.");
+  }
+}
+function stepDemo(){
+  if(demo.cur<=1) return;
+  const p=smallestDiv(demo.cur);
+  if(p===demo.cur){
+    demo.right.push(p);
+    if(demo.left.at(-1)!==p) demo.left.push(p);
+    demo.cur=1;
+  }else{
+    demo.right.push(p);
+    demo.cur/=p;
+    demo.left.push(demo.cur);
+  }
+  drawLadder(demoCanvas, demo.left, demo.right, demo.scale);
+  if(demo.cur<=1){
+    demoStatus.innerHTML = `<span class="ok">Ferdig!</span> ${demo.orig} = ${demo.right.join(' · ')}`;
+    pauseAuto();
+  }else{
+    demoStatus.innerHTML = `${demo.left.at(-2)} deles på <b>${p}</b> → ${demo.cur}`;
+  }
+}
+function autoTick(){ if(demo.cur>1) stepDemo(); else pauseAuto(); }
+function startAuto(){ if(demo.timer) return; demo.timer=setInterval(autoTick,650); demoPause.disabled=false; }
+function pauseAuto(){ if(!demo.timer) return; clearInterval(demo.timer); demo.timer=null; demoPause.disabled=true; }
+
+demoStart.addEventListener('click', ensureDemoValid);
+demoReset.addEventListener('click', ()=> resetDemo("Nullstilt."));
+demoRand.addEventListener('click', ()=>{ demoN.value=randomValidDemoNumber(); resetDemo("Klar."); });
+demoStep.addEventListener('click', stepDemo);
+demoAuto.addEventListener('click', startAuto);
+demoPause.addEventListener('click', pauseAuto);
+demoFinish.addEventListener('click', ()=>{ while(demo.cur>1) stepDemo(); });
+demoZoom.addEventListener('input', e=>{ demo.scale=(+e.target.value)/100; drawLadder(demoCanvas, demo.left, demo.right, demo.scale); });
+resetDemo();
+
+/* ====== ØVING ====== */
+const pracCanvas=document.getElementById('pracCanvas');
+const pracN=document.getElementById('pracN');
+const pracRand=document.getElementById('pracRand');
+const pracStart=document.getElementById('pracStart');
+const pracReset=document.getElementById('pracReset');
+const pracStatus=document.getElementById('pracStatus');
+const choices=document.getElementById('choices');
+const customPrime=document.getElementById('customPrime');
+const checkCustom=document.getElementById('checkCustom');
+const giveHint=document.getElementById('giveHint');
+const giveAns=document.getElementById('giveAns');
+const pracResult=document.getElementById('pracResult');
+const scoreEl=document.getElementById('score');
+
+let prac={orig:130, cur:130, left:[130], right:[], score:0, first:true, scale:1.2};
+
+function resetPractice(){
+  const n=+pracN.value||130;
+  prac={orig:n, cur:n, left:[n], right:[], score:prac.score||0, first:true, scale:1.2};
+  drawLadder(pracCanvas, prac.left, prac.right, prac.scale);
+  pracResult.textContent='';
+  askNext();
+}
+function askNext(){
+  if(prac.cur<=1) return;
+  const s=smallestDiv(prac.cur);
+  pracStatus.innerHTML = (s===prac.cur)? `Siste steg – velg <b>${s}</b>.` : `Velg laveste primtall som deler <b>${prac.cur}</b>.`;
+  renderChoices(prac.cur);
+  prac.first=true;
+}
+function renderChoices(n){
+  choices.innerHTML='';
+  const cap=Math.max(29, Math.ceil(Math.sqrt(n))+30);
+  const primes=sievePrimes(cap).slice(0,50);
+  primes.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=p;
+    b.addEventListener('click',()=> checkPrime(p));
+    choices.appendChild(b);
+  });
+  const spd=smallestDiv(n);
+  if(spd===n && !primes.includes(n)){
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=n;
+    b.addEventListener('click',()=> checkPrime(n));
+    choices.appendChild(b);
+  }
+}
+function correct(p){
+  if(p===prac.cur){
+    prac.right.push(p);
+    if(prac.left.at(-1)!==p) prac.left.push(p);
+    prac.cur=1;
+  }else{
+    prac.right.push(p);
+    prac.cur/=p;
+    prac.left.push(prac.cur);
+  }
+  drawLadder(pracCanvas, prac.left, prac.right, prac.scale);
+  prac.score += prac.first?2:1; scoreEl.textContent=prac.score;
+  if(prac.cur>1) askNext();
+  else{
+    pracStatus.innerHTML = `<span class="ok">Bra!</span> ${prac.orig} = ${prac.right.join(' · ')}`;
+    pracResult.innerHTML = `<div>Produktform: <b>${prac.right.join(' · ')}</b></div>
+                            <div>Med eksponenter: <b>${compress(prac.right)}</b></div>`;
+    choices.innerHTML='';
+  }
+}
+function checkPrime(g){
+  if(prac.cur<=1) return;
+  if(prac.cur%g!==0){ pracStatus.innerHTML=`<span class="bad">Nei.</span> ${g} deler ikke ${prac.cur}.`; prac.first=false; return; }
+  const s=smallestDiv(prac.cur);
+  if(g!==s){ pracStatus.innerHTML=`<span class="bad">Nesten.</span> ${g} deler ${prac.cur}, men <b>${s}</b> er lavere.`; prac.first=false; return; }
+  pracStatus.innerHTML=`<span class="ok">Riktig!</span> Del på ${g}.`; correct(g);
+}
+/* Øving events */
+pracStart.addEventListener('click', resetPractice);
+pracReset.addEventListener('click', resetPractice);
+pracRand.addEventListener('click', ()=>{ pracN.value = Math.floor(10+Math.random()*40000); resetPractice(); });
+checkCustom.addEventListener('click', ()=>{ const v=+customPrime.value; if(!v) return; checkPrime(v); customPrime.value=''; });
+customPrime.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); checkCustom.click(); }});
+giveHint.addEventListener('click', ()=>{ const s=smallestDiv(prac.cur); pracStatus.innerHTML=`Hint: Sjekk <b>${s<=11?s:'2, 3, 5, 7, 11 …'}</b>.`; prac.first=false; });
+giveAns.addEventListener('click', ()=>{ const s=smallestDiv(prac.cur); checkPrime(s); });
+
+/* Init */
+resetPractice();
+</script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Algebraisk faktorisering – Demo & Øving</title>
+<style>
+  :root{
+    --bg:#000; --panel:#0c0c0c; --ink:#fff; --sub:#b3b3b3;
+    --accent:#42ff9e; --accent2:#59caff; --warn:#ffd166; --err:#ff4d4d;
+    --border:#222;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; padding:28px; background:var(--bg); color:var(--ink);
+       font:17px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;}
+  h1{font-size:clamp(24px,4vw,40px); margin:0 0 6px}
+  .sub{color:var(--sub); margin:0 0 18px}
+  .tabs{display:flex; gap:10px; margin:12px 0 18px}
+  .tab{border:1px solid var(--border); background:#0f0f0f; color:var(--ink);
+       padding:12px 16px; border-radius:14px; cursor:pointer; font-weight:600}
+  .tab[aria-selected="true"]{outline:2px solid var(--accent2); background:#101820}
+  .panel{display:none}
+  .panel[aria-hidden="false"]{display:block}
+
+  .controls{display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:12px 0 18px}
+  label{display:flex; flex-direction:column; gap:6px; font-size:14px}
+  input[type="text"], input[type="number"]{
+    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
+    padding:10px 12px; min-width:200px;
+  }
+  select{
+    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
+    padding:10px 12px;
+  }
+  button{
+    background:#0f0f0f; color:var(--ink); border:1px solid var(--border); border-radius:12px;
+    padding:10px 14px; cursor:pointer; font-weight:600
+  }
+  button.primary{background:var(--accent2); color:#001018; border-color:transparent}
+  button.good{background:var(--accent); color:#00180a; border-color:transparent}
+  button.warn{background:var(--warn); color:#2b2000; border-color:transparent}
+  button:disabled{opacity:.55; cursor:not-allowed}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px}
+  .big{font-size:clamp(22px,3.4vw,34px); font-weight:700; letter-spacing:.2px}
+  .expr{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace}
+
+  .steps{display:flex; flex-direction:column; gap:10px; margin-top:10px}
+  .step{padding:12px; border:1px dashed #2a2a2a; border-radius:12px}
+  .hint{color:var(--sub); font-size:14px; margin-top:6px}
+  .status{margin-top:10px; font-size:16px}
+  .status .ok{color:var(--accent)}
+  .status .bad{color:var(--err)}
+  .row{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+  .grow{flex:1}
+
+  .chips{display:flex; flex-wrap:wrap; gap:10px}
+  .chip{background:#0f0f0f; border:1px solid var(--border); border-radius:999px; padding:8px 12px; cursor:pointer}
+  .chip:hover{outline:2px solid var(--accent2)}
+</style>
+</head>
+<body>
+  <h1>Algebraisk faktorisering</h1>
+  <div class="sub">Høy-kontrast demo for tavle, og øving der elevene velger riktig metode og fullfører stegene. Alt er i én variabel <b>x</b> med heltallskoeffisienter.</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-demo" role="tab" aria-selected="true" aria-controls="panel-demo">Demo (lærer)</button>
+    <button class="tab" id="tab-prac" role="tab" aria-selected="false" aria-controls="panel-prac">Øving (elev)</button>
+  </div>
+
+  <!-- DEMO -->
+  <section id="panel-demo" class="panel" aria-hidden="false" aria-labelledby="tab-demo">
+    <div class="controls">
+      <label>Uttrykk (x)
+        <input id="demoExpr" type="text" value="6x^2 + 9x">
+      </label>
+      <button id="demoStart" class="primary">Start demo</button>
+      <button id="demoStep">Neste steg</button>
+      <button id="demoFinish">Kjør til slutt</button>
+      <div class="grow"></div>
+      <label>Eksempler
+        <select id="demoExamples">
+          <option value="6x^2 + 9x">Felles faktor: 6x² + 9x</option>
+          <option value="9x^2 - 16">Forskjell av kvadrater: 9x² - 16</option>
+          <option value="x^2 - 6x + 9">Fullstendig kvadrat: x² - 6x + 9</option>
+          <option value="6x^2 + 11x + 3">Trinomial: 6x² + 11x + 3</option>
+          <option value="8x^2 - 2x - 3">Trinomial: 8x² - 2x - 3</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="big expr" id="demoNow"></div>
+      <div class="steps" id="demoSteps"></div>
+      <div class="status" id="demoStatus"></div>
+      <div class="hint">Rekkefølge i demo: <b>1)</b> Trekk ut felles faktor hvis mulig. <b>2)</b> Sjekk mønster: forskjell av kvadrater, fullstendig kvadrat eller trinom (ac-metoden).</div>
+    </div>
+  </section>
+
+  <!-- ØVING -->
+  <section id="panel-prac" class="panel" aria-hidden="true" aria-labelledby="tab-prac">
+    <div class="controls">
+      <label>Velg type
+        <select id="mode">
+          <option value="mixed">Blandet (anbefalt)</option>
+          <option value="gcf">Felles faktor</option>
+          <option value="dSquares">Forskjell av kvadrater</option>
+          <option value="pSquare">Fullstendig kvadrat</option>
+          <option value="trinomial">Trinomial (ax²+bx+c)</option>
+        </select>
+      </label>
+      <button id="newTask" class="primary">Ny oppgave</button>
+      <div class="grow"></div>
+      <div>Poeng: <span id="score">0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="big expr" id="qExpr"></div>
+
+      <div class="step">
+        <div style="font-weight:700; margin-bottom:6px">1) Velg riktig metode</div>
+        <div class="chips" id="methodChoices"></div>
+        <div class="status" id="methodStatus"></div>
+      </div>
+
+      <div class="step" id="stepInputs" style="display:none">
+        <div style="font-weight:700; margin-bottom:6px">2) Fullfør steget</div>
+        <!-- GCF -->
+        <div id="gcfFields" class="row" style="display:none">
+          <label>Koeffisient (GCF)
+            <input id="gcfC" type="number" step="1" value="1">
+          </label>
+          <label>Eksponent på x i GCF
+            <input id="gcfK" type="number" step="1" value="0">
+          </label>
+          <button id="gcfCheck">Trekk ut</button>
+        </div>
+        <!-- Difference of squares -->
+        <div id="dsFields" class="row" style="display:none">
+          <label>√(første koeff.)
+            <input id="dsA" type="number" step="1" value="1">
+          </label>
+          <label>Halv eksponent (første)
+            <input id="dsEa" type="number" step="1" value="1">
+          </label>
+          <label>√(andre koeff.)
+            <input id="dsB" type="number" step="1" value="1">
+          </label>
+          <label>Halv eksponent (andre)
+            <input id="dsEb" type="number" step="1" value="0">
+          </label>
+          <button id="dsCheck">(A−B)(A+B)</button>
+        </div>
+        <!-- Perfect square -->
+        <div id="psFields" class="row" style="display:none">
+          <label>Faktor ved x i (sx ± t)²
+            <input id="psS" type="number" step="1" value="1">
+          </label>
+          <label>Konstant i (sx ± t)²
+            <input id="psT" type="number" step="1" value="1">
+          </label>
+          <label>Tegn
+            <select id="psSign"><option value="+">+</option><option value="-">−</option></select>
+          </label>
+          <button id="psCheck">Sjekk</button>
+        </div>
+        <!-- Trinomial -->
+        <div id="triFields" class="row" style="display:none">
+          <label>Faktor 1 (m)
+            <input id="m1" type="number" step="1" value="1">
+          </label>
+          <label>Konstant 1 (p)
+            <input id="p1" type="number" step="1" value="1">
+          </label>
+          <label>Faktor 2 (n)
+            <input id="m2" type="number" step="1" value="1">
+          </label>
+          <label>Konstant 2 (q)
+            <input id="p2" type="number" step="1" value="1">
+          </label>
+          <button id="triCheck">(m x + p)(n x + q)</button>
+          <button id="triHint" class="warn">Hint (ac-metoden)</button>
+        </div>
+
+        <div class="status" id="stepStatus"></div>
+      </div>
+
+      <div class="status" id="finalStatus" style="margin-top:12px"></div>
+      <div class="hint">Tips: Skriv uttrykk som <span class="expr">6x^2 + 11x + 3</span>, <span class="expr">9x^2 - 16</span> osv. Bruk <span class="expr">

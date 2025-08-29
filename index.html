@@ -84,8 +84,19 @@
     user-select:none; position:relative; transition:transform .08s ease;
     box-shadow: inset 0 0 0 1px #00000022;
   }
+  /* 2s "pop før stryk" animasjon */
+  .cell100.strike-anim{
+    animation: strikeOut 2s ease-in-out forwards;
+  }
+  @keyframes strikeOut{
+    0%   { transform: scale(1.00); background:#ffffff; color:#000000; }
+    20%  { transform: scale(1.22); }
+    50%  { transform: scale(1.00); }
+    70%  { transform: scale(1.10); }
+    100% { transform: scale(1.00); background: var(--strikeBlue); color:#cfe3ff; }
+  }
   .cell100.struck{
-    background:var(--strikeBlue);  /* Mørk blå ved stryk */
+    background:var(--strikeBlue);
     color:#cfe3ff;
     text-decoration:line-through; text-decoration-thickness:3px;
   }
@@ -116,7 +127,7 @@
 </head>
 <body>
   <h1>Primtallsøving</h1>
-  <div class="sub">Fane 1: faktoriser et tall ved å velge <b>laveste</b> primfaktor. Fane 2: sil 1–100 – etter <b>2, 3, 5, 7</b> (ikke 11) er alt igjen primtall. Da markeres vi som ferdig.</div>
+  <div class="sub">Fane 1: faktoriser et tall ved å velge <b>laveste</b> primfaktor. Fane 2: sil 1–100 – det holder å bruke <b>2, 3, 5, 7</b>. Når ingen flere kan strykes, “popper” alle primtall i gull.</div>
 
   <div class="tabs" role="tablist">
     <button id="tab-factor" class="tab" role="tab" aria-selected="true" aria-controls="panel-factor">Faktorisering</button>
@@ -171,7 +182,7 @@
       </div>
       <div id="sieveMsg" class="status"></div>
       <div class="hint">
-        Klikk 2, deretter 3, 5, 7. Det er nok for 1–100 (fordi √100 = 10). Når ingen flere kan strykes, lyser primtallene opp i gull – da er vi ferdige!
+        Klikk 2, deretter 3, 5, 7. Når ingen flere kan strykes, popper primtallene i gull – da er vi ferdige!
       </div>
       <div class="controls" style="justify-content:center">
         <button id="resetSieve">Nullstill sil</button>
@@ -272,12 +283,12 @@ const primeRow = document.getElementById('primeRow');
 const sieveMsg = document.getElementById('sieveMsg');
 const resetSieve = document.getElementById('resetSieve');
 
-let sieve = {selected:[], struck:new Set(), done:false};
+let sieve = {selected:[], struck:new Set(), done:false, animating:false};
 const primes100 = sievePrimes(100);
 const bases = [2,3,5,7]; // nok for 1–100
 
 const buildGrid=()=>{
-  gridEl.innerHTML=''; sieve.struck.clear(); sieve.done=false; sieve.selected=[];
+  gridEl.innerHTML=''; sieve.struck.clear(); sieve.done=false; sieve.selected=[]; sieve.animating=false;
   for(let i=1;i<=100;i++){
     const c=document.createElement('div');
     c.className='cell100'; c.dataset.n=i; c.textContent=i;
@@ -295,20 +306,60 @@ const buildPrimeButtonsRow=()=>{
     primeRow.appendChild(b);
   });
 };
+
+const disablePrimeButtons = (flag)=> {
+  for(const b of primeRow.children){ b.disabled = flag; }
+};
+
 const clickPrime=(p,btn)=>{
-  if(sieve.done) return;
+  if(sieve.done || sieve.animating) return;
   btn.classList.add('active');
-  // stryk alle multiplene av p (unntatt p selv)
-  let anyStruck=false;
+
+  // Finn alle nye celler som skal strykes nå
+  const toStrike=[];
   for(const cell of gridEl.children){
     const n=+cell.dataset.n;
-    if(n!==p && n%p===0 && !cell.classList.contains('struck')){
-      cell.classList.add('struck'); sieve.struck.add(n); anyStruck=true;
+    if(n!==p && n%p===0 && !cell.classList.contains('struck') && !cell.classList.contains('strike-anim')){
+      toStrike.push(cell);
     }
   }
-  if(!sieve.selected.includes(p)) sieve.selected.push(p);
 
-  // Sjekk ferdig: se bare på gjenværende n>=2
+  // Hvis ingen nye – sjekk om vi er ferdig uansett
+  if(toStrike.length===0){
+    if(!sieve.selected.includes(p)) sieve.selected.push(p);
+    postStrikeCheck(); // kan markere ferdig etter 7 selv uten nye stryk
+    sieveMsg.textContent = nextSuggestion();
+    return;
+  }
+
+  // Kjør 2s “pop før stryk”-animasjon på alle de nye
+  sieve.animating = true;
+  disablePrimeButtons(true);
+  let left = toStrike.length;
+
+  toStrike.forEach(cell=>{
+    cell.classList.add('strike-anim');
+    const done = ()=>{
+      cell.removeEventListener('animationend', done);
+      cell.classList.remove('strike-anim');
+      cell.classList.add('struck');   // blir mørk blå permanent
+      sieve.struck.add(+cell.dataset.n);
+      left--;
+      if(left===0){
+        // ferdig med alle animasjoner for dette primtallet
+        if(!sieve.selected.includes(p)) sieve.selected.push(p);
+        sieve.animating = false;
+        disablePrimeButtons(false);
+        postStrikeCheck();
+        sieveMsg.textContent = nextSuggestion();
+      }
+    };
+    cell.addEventListener('animationend', done);
+  });
+};
+
+function postStrikeCheck(){
+  // Sjekk om alle gjenværende (>=2) er primtall
   const remaining2 = [...gridEl.children]
     .map(c=>+c.dataset.n)
     .filter(n=>n>=2 && !sieve.struck.has(n));
@@ -317,48 +368,35 @@ const clickPrime=(p,btn)=>{
   const usedAllBases = bases.every(b => sieve.selected.includes(b));
 
   if(allPrime || usedAllBases){
-    finishSieve();  // marker ferdig på en tydelig måte
-    return;
+    finishSieve();
   }
+}
 
-  // Oppdater beskjed
-  if(!anyStruck){
-    const next = nextSuggestion();
-    sieveMsg.innerHTML = `Ingen nye tall kunne strykes med ${p}. ${next}`;
-  }else{
-    sieveMsg.textContent = nextSuggestion();
-  }
-};
 function finishSieve(){
   if(sieve.done) return;
   sieve.done = true;
 
-  // Marker alle gjenværende primtall med “gull-pop”
+  // “Pop” alle gjenværende primtall i gull
   for(const cell of gridEl.children){
     const n=+cell.dataset.n;
     if(n>=2 && !cell.classList.contains('struck') && isPrime(n)){
-      // restart animasjon ved å fjerne/force reflow/legge til klasse
       cell.classList.remove('prime-final');
-      void cell.offsetWidth; // reflow hack
+      void cell.offsetWidth; // reflow for å restarte animasjon
       cell.classList.add('prime-final');
     }
   }
-  // Deaktiver knapper
-  for(const b of primeRow.children){ b.disabled=true; }
-
+  disablePrimeButtons(true);
   sieveMsg.innerHTML = `<span class="ok">Ferdig!</span> Vi kan ikke stryke flere tall. De som “popper” og lyser i gull er <b>alle primtallene under 100</b>.`;
 }
+
 const nextSuggestion=()=> {
   const used=new Set(sieve.selected);
-  // foreslå neste av 2,3,5,7 først, deretter resten
   const order=[2,3,5,7,...primes100.filter(p=>p>7)];
   const next = order.find(x=>!used.has(x));
-  return next? `Prøv ${next} neste.` : 'Alle baser er brukt.';
+  return next? `Prøv ${next} neste.` : 'Alle nødvendige primtall er brukt.';
 };
 
-resetSieve.onclick=()=>{
-  buildGrid();
-};
+resetSieve.onclick=()=>{ buildGrid(); };
 
 buildGrid();
 

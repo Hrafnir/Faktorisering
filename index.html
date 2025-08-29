@@ -3,408 +3,372 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Primfaktorisering – Canvas Demo & Øving</title>
+<title>Primtallsøving – Faktorisering & Sil</title>
 <style>
   :root{
-    --bg:#000; --panel:#0c0c0c; --ink:#fff; --sub:#b3b3b3;
-    --accent:#42ff9e; --accent2:#59caff; --warn:#ffd166; --err:#ff4d4d;
+    --bg:#000; --panel:#0b0f12; --ink:#fff; --muted:#c1c7cd;
+    --accent:#42ff9e; --accent2:#59caff;
+    --gold:#ffd54a; --gold2:#ffb300; --gold3:#fff0a6;
+    --warn:#ffd166; --err:#ff5252; --border:#283544; --grid:#1e2937;
+    --strikeBlue:#0c2e6f; /* mørk blå for strøkne celler */
   }
   *{box-sizing:border-box}
   body{margin:0; padding:28px; background:var(--bg); color:var(--ink);
-       font:17px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;}
-  h1{font-size:clamp(24px,4vw,40px); margin:0 0 6px}
-  .sub{color:var(--sub); margin:0 0 18px}
+       font:18px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;}
+  h1{margin:0 0 6px; font-size:clamp(24px,4.5vw,40px)}
+  .sub{color:var(--muted); margin:0 0 18px}
 
-  .tabs{display:flex; gap:10px; margin:12px 0 18px}
-  .tab{border:1px solid #222; background:#0f0f0f; color:var(--ink);
-       padding:12px 16px; border-radius:14px; cursor:pointer; font-weight:600}
-  .tab[aria-selected="true"]{outline:2px solid var(--accent2); background:#101820}
+  .tabs{display:flex; gap:12px; margin:14px 0 20px}
+  .tab{border:2px solid var(--border); background:#0e141a; color:var(--ink);
+       padding:12px 18px; border-radius:16px; cursor:pointer; font-weight:700; letter-spacing:.2px}
+  .tab[aria-selected="true"]{outline:3px solid var(--accent2); background:#0f1822}
   .panel{display:none}
   .panel[aria-hidden="false"]{display:block}
 
-  .controls{display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:12px 0 18px}
-  label{display:flex; flex-direction:column; gap:6px; font-size:14px}
-  input[type="number"], input[type="range"]{
-    background:#0f0f0f; color:var(--ink); border:1px solid #222; border-radius:12px;
-    padding:10px 12px; min-width:150px;
+  .controls{display:flex; flex-wrap:wrap; gap:14px; align-items:end; margin:12px 0 18px}
+  label{display:flex; flex-direction:column; gap:6px; font-size:15px}
+
+  .input-xl{
+    background:#0e141a; color:var(--ink); border:2px solid var(--border); border-radius:14px;
+    padding:14px 16px; min-width:220px; font-size:20px; font-weight:700;
+  }
+  .input-md{
+    background:#0e141a; color:var(--ink); border:2px solid var(--border); border-radius:14px;
+    padding:12px 14px; min-width:180px; font-size:18px; font-weight:700;
   }
   button{
-    background:#0f0f0f; color:var(--ink); border:1px solid #222; border-radius:12px;
-    padding:10px 14px; cursor:pointer; font-weight:600;
+    background:#0e141a; color:var(--ink); border:2px solid var(--border); border-radius:14px;
+    padding:12px 16px; cursor:pointer; font-weight:800; letter-spacing:.2px
   }
   button.primary{background:var(--accent2); color:#001018; border-color:transparent}
   button.good{background:var(--accent); color:#00180a; border-color:transparent}
   button.warn{background:var(--warn); color:#2b2000; border-color:transparent}
   button:disabled{opacity:.55; cursor:not-allowed}
+  .toggle{display:inline-flex; gap:10px; align-items:center}
   .grow{flex:1}
 
-  .card{background:var(--panel); border:1px solid #222; border-radius:18px; padding:18px}
-
-  .chips{display:flex; flex-wrap:wrap; gap:10px}
-  .chip{background:#0f0f0f; border:1px solid #222; border-radius:999px; padding:8px 12px; cursor:pointer}
-  .chip:hover{outline:2px solid var(--accent2)}
-  .status{margin-top:10px; font-size:16px}
+  .card{background:var(--panel); border:2px solid var(--border); border-radius:20px; padding:20px}
+  .status{margin-top:10px; font-size:18px}
   .status .ok{color:var(--accent)}
   .status .bad{color:var(--err)}
-  .hint{color:var(--sub); font-size:14px}
-  canvas{width:100%; height:auto; display:block; background:#0b0b0b; border-radius:12px}
+  .hint{color:var(--muted); font-size:15px; margin-top:12px}
+
+  /* Stolpemetoden */
+  .ladder{display:grid; grid-template-columns: 1fr 8px 180px; gap:0; width:min(760px,100%); margin:0 auto; font-family:ui-monospace,monospace; font-size:30px}
+  .ladder .bar{background:#ffffff26}
+  .ladder .cell{padding:8px 12px; min-height:50px; display:flex; align-items:center; justify-content:flex-end; border-bottom:2px solid var(--grid)}
+  .ladder .cell.right{justify-content:flex-start}
+
+  .chips{display:flex; flex-wrap:wrap; gap:12px}
+  .chip{background:#0e141a; border:2px solid var(--border); border-radius:999px; padding:10px 14px; cursor:pointer; font-weight:700}
+  .chip:hover{outline:3px solid var(--accent2)}
+
+  /* SIL 1–100 */
+  .grid-wrap{
+    background:
+      linear-gradient(#121a23,#121a23) padding-box,
+      repeating-linear-gradient(to right, transparent 0 1px, #0d1319 1px 72px) border-box,
+      repeating-linear-gradient(to bottom, transparent 0 1px, #0d1319 1px 72px) border-box;
+    border:2px solid var(--grid);
+    border-radius:16px;
+    padding:10px;
+  }
+  .grid{display:grid; grid-template-columns:repeat(10,72px); grid-auto-rows:72px; gap:8px;
+        justify-content:center; width:100%; margin:0 auto}
+  .cell100{
+    border:2px solid var(--grid); border-radius:12px;
+    background:#ffffff;            /* HVIT fra start */
+    color:#000000;                 /* Sorte tall */
+    font-weight:900; font-size:22px;
+    display:flex; align-items:center; justify-content:center;
+    user-select:none; position:relative; transition:transform .08s ease;
+    box-shadow: inset 0 0 0 1px #00000022;
+  }
+  .cell100.struck{
+    background:var(--strikeBlue);  /* Mørk blå ved stryk */
+    color:#cfe3ff;
+    text-decoration:line-through; text-decoration-thickness:3px;
+  }
+
+  /* Ferdig-markering: “pop” + gull-glød */
+  .cell100.prime-final{
+    color:#2a1b00;
+    background: radial-gradient(ellipse at center, var(--gold3) 0%, #ffe680 55%, #fff 100%);
+    box-shadow: 0 0 0 3px var(--gold), 0 0 26px 6px #ffd54a88;
+    animation: primePop .65s ease-out forwards;
+  }
+  @keyframes primePop{
+    0%   { transform: scale(1.00); }
+    35%  { transform: scale(1.28); }
+    70%  { transform: scale(1.00); }
+    100% { transform: scale(1.10); } /* litt større enn start */
+  }
+
+  .row-primes{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:16px}
+  .pbtn{background:#0e141a; color:#fff; border:2px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; min-width:48px; font-weight:800}
+  .pbtn.active{background:#102133; outline:3px solid var(--accent2)}
+  .legend{display:flex; gap:16px; justify-content:center; margin:10px 0 0; color:var(--muted); font-size:14px}
+  .legend .box{width:22px; height:22px; border-radius:6px; display:inline-block; vertical-align:middle; margin-right:6px; border:2px solid var(--grid)}
+  .legend .box.start{background:#ffffff}
+  .legend .box.struck{background:var(--strikeBlue)}
+  .legend .box.prime{background:radial-gradient(circle, var(--gold3), var(--gold))}
 </style>
 </head>
 <body>
-  <h1>Primtallsfaktorisering (Canvas)</h1>
-  <div class="sub">Stolpemetoden tegnes på <b>canvas</b>. Demo krever primfaktorer ≤ 13. Øving krever at eleven velger laveste primfaktor.</div>
+  <h1>Primtallsøving</h1>
+  <div class="sub">Fane 1: faktoriser et tall ved å velge <b>laveste</b> primfaktor. Fane 2: sil 1–100 – etter <b>2, 3, 5, 7</b> (ikke 11) er alt igjen primtall. Da markeres vi som ferdig.</div>
 
   <div class="tabs" role="tablist">
-    <button id="tab-demo" class="tab" role="tab" aria-selected="true" aria-controls="panel-demo">Demo (lærer)</button>
-    <button id="tab-prac" class="tab" role="tab" aria-selected="false" aria-controls="panel-prac">Øving (elev)</button>
+    <button id="tab-factor" class="tab" role="tab" aria-selected="true" aria-controls="panel-factor">Faktorisering</button>
+    <button id="tab-sieve"  class="tab" role="tab" aria-selected="false" aria-controls="panel-sieve">Primtall-sil (1–100)</button>
   </div>
 
-  <!-- DEMO -->
-  <section id="panel-demo" class="panel" aria-hidden="false" aria-labelledby="tab-demo">
+  <!-- FANE: FAKTORISERING -->
+  <section id="panel-factor" class="panel" aria-hidden="false" aria-labelledby="tab-factor">
     <div class="controls">
-      <label>Starttall (kun faktorer ≤ 13 i demo)
-        <input id="demoN" type="number" min="2" step="1" value="130">
+      <label>Nytt tall
+        <input id="nInput" class="input-xl" type="number" min="2" step="1" value="130"/>
       </label>
-      <button id="demoRand" class="good">Tilfeldig gyldig</button>
-      <button id="demoStart" class="primary">Start demo</button>
-      <button id="demoReset">Nullstill</button>
+      <button id="btnRandom">Tilfeldig tall</button>
+      <button id="btnStart" class="primary">Start</button>
+      <button id="btnReset">Nullstill</button>
       <div class="grow"></div>
-      <label style="min-width:230px">Zoom
-        <input id="demoZoom" type="range" min="80" max="170" value="120">
-      </label>
-      <button id="demoStep">Neste</button>
-      <button id="demoAuto">Auto ▶</button>
-      <button id="demoPause" disabled>Pause ⏸</button>
-      <button id="demoFinish">Til slutt</button>
+      <label class="toggle"><input id="useButtons" type="checkbox"/> Bruk primtall-knapper</label>
     </div>
+
     <div class="card">
-      <canvas id="demoCanvas"></canvas>
-      <div id="demoStatus" class="status"></div>
-      <div class="hint">Algoritmen sjekker 2, 3, 5, 7, 11, 13, … I demo sikrer vi at tallet ikke har primfaktor &gt; 13.</div>
+      <div id="ladder" class="ladder" aria-live="polite"></div>
+
+      <div id="manualBox" class="controls">
+        <label>Neste primfaktor
+          <input id="primeGuess" class="input-md" type="number" min="2" step="1" placeholder="2, 3, 5, 7, ..."/>
+        </label>
+        <button id="btnCheck">Sjekk</button>
+      </div>
+
+      <div id="buttonsBox" class="chips" style="display:none"></div>
+
+      <div id="status" class="status"></div>
+      <div id="result" class="status"></div>
+
+      <div class="hint">
+        Velg alltid <b>laveste</b> primtall som deler resttallet. Når du treffer, deler vi og legger en ny linje i tabellen.
+      </div>
     </div>
   </section>
 
-  <!-- ØVING -->
-  <section id="panel-prac" class="panel" aria-hidden="true" aria-labelledby="tab-prac">
-    <div class="controls">
-      <label>Nytt tall
-        <input id="pracN" type="number" min="2" step="1" value="130">
-      </label>
-      <button id="pracRand">Tilfeldig tall</button>
-      <button id="pracStart" class="primary">Start øving</button>
-      <button id="pracReset">Nullstill</button>
-      <div class="grow"></div>
-      <div>Poeng: <span id="score">0</span></div>
-    </div>
-
+  <!-- FANE: SIL 1–100 -->
+  <section id="panel-sieve" class="panel" aria-hidden="true" aria-labelledby="tab-sieve">
     <div class="card">
-      <canvas id="pracCanvas"></canvas>
-      <div id="pracStatus" class="status"></div>
-      <div class="hint">Velg laveste primtall som deler resttallet. Du kan også skrive inn et tall.</div>
-      <div id="choices" class="chips"></div>
-
-      <div class="controls">
-        <label>Skriv eget primtall
-          <input id="customPrime" type="number" min="2" step="1" />
-        </label>
-        <button id="checkCustom">Sjekk</button>
-        <button id="giveHint" class="warn">Hint</button>
-        <button id="giveAns" class="good">Vis riktig</button>
+      <div class="grid-wrap">
+        <div id="grid" class="grid" aria-live="polite"></div>
+      </div>
+      <div class="row-primes" id="primeRow"></div>
+      <div class="legend">
+        <span><span class="box start"></span>Start</span>
+        <span><span class="box struck"></span>Stryket (delelig)</span>
+        <span><span class="box prime"></span>Primtall (ferdig)</span>
+      </div>
+      <div id="sieveMsg" class="status"></div>
+      <div class="hint">
+        Klikk 2, deretter 3, 5, 7. Det er nok for 1–100 (fordi √100 = 10). Når ingen flere kan strykes, lyser primtallene opp i gull – da er vi ferdige!
+      </div>
+      <div class="controls" style="justify-content:center">
+        <button id="resetSieve">Nullstill sil</button>
       </div>
     </div>
-
-    <div id="pracResult" class="card"></div>
   </section>
 
 <script>
 /* ====== Mattehjelpere ====== */
-const sievePrimes = (limit=100000)=>{
-  const n=Math.max(2,limit|0), a=new Uint8Array(n+1), out=[];
-  for(let i=2;i<=n;i++){ if(!a[i]){ out.push(i); if(i*i<=n) for(let j=i*i;j<=n;j+=i) a[j]=1; } }
-  return out;
+const sievePrimes=(limit=100)=>{const a=new Uint8Array(limit+1);const out=[];for(let i=2;i<=limit;i++){if(!a[i]){out.push(i);if(i*i<=limit)for(let j=i*i;j<=limit;j+=i)a[j]=1}}return out};
+const smallestDiv=(n)=>{if(n%2===0)return 2;let p=3,cap=Math.floor(Math.sqrt(n));while(p<=cap){if(n%p===0)return p;p+=2}return n};
+const isPrime=(n)=>{if(n<2) return false; return smallestDiv(n)===n;};
+
+/* ====== FANE 1: Faktorisering ====== */
+const nInput  = document.getElementById('nInput');
+const btnRandom = document.getElementById('btnRandom');
+const btnStart  = document.getElementById('btnStart');
+const btnReset  = document.getElementById('btnReset');
+const ladderEl  = document.getElementById('ladder');
+const statusEl  = document.getElementById('status');
+const resultEl  = document.getElementById('result');
+
+const manualBox = document.getElementById('manualBox');
+const primeGuess = document.getElementById('primeGuess');
+const btnCheck   = document.getElementById('btnCheck');
+const useButtons = document.getElementById('useButtons');
+const buttonsBox = document.getElementById('buttonsBox');
+
+let state = {orig:130, cur:130, left:[130], right:[]};
+
+const renderLadder=(left,right)=>{
+  ladderEl.innerHTML='';
+  const rows=Math.max(left.length,right.length);
+  for(let i=0;i<rows;i++){
+    const L=document.createElement('div'); L.className='cell'; L.textContent=left[i]??'';
+    const BAR=document.createElement('div'); BAR.className='bar';
+    const R=document.createElement('div'); R.className='cell right'; R.textContent=right[i]??'';
+    ladderEl.appendChild(L); ladderEl.appendChild(BAR); ladderEl.appendChild(R);
+  }
 };
-const smallestDiv = (n)=>{
-  if(n%2===0) return 2;
-  let p=3, cap=Math.floor(Math.sqrt(n));
-  while(p<=cap){ if(n%p===0) return p; p+=2; }
-  return n;
+const resetFactor=()=>{
+  const n=+nInput.value||130;
+  state={orig:n, cur:n, left:[n], right:[]};
+  renderLadder(state.left,state.right);
+  statusEl.textContent='Klar. Skriv laveste primfaktor.';
+  resultEl.textContent='';
+  primeGuess.value='';
+  buildPrimeButtons();
 };
-const hasPrimeFactorAbove = (n,k)=>{
-  while(n>1){
-    const d=smallestDiv(n);
-    if(d>k) return true;
-    n=(d===n)?1:n/d;
-  }
-  return false;
-};
-const compress = (arr)=>{
-  const m=new Map(); arr.forEach(x=>m.set(x,(m.get(x)||0)+1));
-  return [...m.entries()].map(([p,e])=> e>1?`${p}^${e}`:`${p}`).join(' · ');
-};
-
-/* ====== Canvas tegning av “stolpemetoden” ====== */
-function drawLadder(canvas, left, right, scale=1.0){
-  // High-DPI
-  const dpr = window.devicePixelRatio || 1;
-  const pad  = 20*scale;                 // ytre padding
-  const rowH = 46*scale;                 // høyde pr rad
-  const barW = 6*scale;                  // bredde på stolpen
-  const rightColW = 170*scale;           // bredde for høyre kolonne
-  const fontPx = Math.round(34*scale);   // stor font
-  const rows = Math.max(left.length, right.length);
-
-  // bredde = venstre (auto) + bar + høyre
-  const cssW = Math.min(760*scale, canvas.parentElement.clientWidth - 10);
-  const cssH = pad*2 + rows*rowH;
-
-  canvas.style.width  = cssW + "px";
-  canvas.style.height = cssH + "px";
-  canvas.width  = Math.round(cssW*dpr);
-  canvas.height = Math.round(cssH*dpr);
-
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,cssW,cssH);
-
-  // Farger/typografi
-  ctx.fillStyle = "#0b0b0b";
-  ctx.fillRect(0,0,cssW,cssH);
-
-  ctx.strokeStyle = "#1a1a1a";
-  ctx.lineWidth = 1;
-
-  // Skriv tall – finn nødvendig venstre bredde ved å måle tekst
-  ctx.font = `600 ${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace`;
-  ctx.fillStyle = "#ffffff";
-  const measureText = (s)=> ctx.measureText(String(s)).width;
-  let leftMaxW = 0;
-  for(const v of left) leftMaxW = Math.max(leftMaxW, measureText(v||""));
-
-  const leftColW = Math.max(leftMaxW + 24*scale, (cssW - rightColW - barW - pad*2)*0.9);
-  const xLeft  = pad;
-  const xBar   = xLeft + leftColW;
-  const xRight = xBar + barW;
-
-  // Vertikal stolpe
-  ctx.fillStyle = "#ffffff20";
-  ctx.fillRect(xBar, pad*.7, barW, cssH - pad*1.4);
-
-  // Rader + tall
-  for(let r=0;r<rows;r++){
-    const yTop = pad + r*rowH;
-    // bunnlinje
-    ctx.strokeStyle = "#1a1a1a";
-    ctx.beginPath();
-    ctx.moveTo(xLeft, yTop+rowH);
-    ctx.lineTo(xRight + rightColW, yTop+rowH);
-    ctx.stroke();
-
-    // venstre tall (høyrejustert)
-    const L = left[r]; if(L!==undefined){
-      const tw = measureText(L);
-      ctx.fillStyle = "#fff";
-      ctx.fillText(L, xBar - 10*scale - tw, yTop + rowH*0.72);
-    }
-    // høyre tall (venstrejustert)
-    const R = right[r]; if(R!==undefined){
-      ctx.fillStyle = "#fff";
-      ctx.fillText(R, xRight + 10*scale, yTop + rowH*0.72);
-    }
-  }
-}
-
-/* ====== Felles logikk for demo/øving ====== */
-function makeLadderArrays(n){
-  const left=[n], right=[];
-  let cur=n;
-  while(cur>1){
-    const d=smallestDiv(cur);
-    right.push(d);
-    if(d===cur){ if(left[left.length-1]!==d) left.push(d); cur=1; }
-    else { cur/=d; left.push(cur); }
-  }
-  return {left,right};
-}
-const randomValidDemoNumber = ()=>{
-  const primes=[2,3,5,7,11,13];
-  const terms = 2 + Math.floor(Math.random()*4); // 2–5 faktorer
-  let n=1;
-  for(let i=0;i<terms;i++){
-    const p=primes[Math.floor(Math.random()*primes.length)];
-    n*=p;
-    if(n>99999) break;
-  }
-  return Math.max(2,n);
-};
-
-/* ====== Tabs ====== */
-const tabDemo=document.getElementById('tab-demo');
-const tabPrac=document.getElementById('tab-prac');
-const panelDemo=document.getElementById('panel-demo');
-const panelPrac=document.getElementById('panel-prac');
-function switchTab(which){
-  const isDemo = which==='demo';
-  tabDemo.setAttribute('aria-selected', isDemo);
-  tabPrac.setAttribute('aria-selected', !isDemo);
-  panelDemo.setAttribute('aria-hidden', !isDemo);
-  panelPrac.setAttribute('aria-hidden', isDemo);
-  pauseAuto();
-}
-tabDemo.addEventListener('click',()=>switchTab('demo'));
-tabPrac.addEventListener('click',()=>switchTab('prac'));
-
-/* ====== DEMO ====== */
-const demoCanvas = document.getElementById('demoCanvas');
-const demoN = document.getElementById('demoN');
-const demoRand = document.getElementById('demoRand');
-const demoStart= document.getElementById('demoStart');
-const demoReset= document.getElementById('demoReset');
-const demoStep = document.getElementById('demoStep');
-const demoAuto = document.getElementById('demoAuto');
-const demoPause= document.getElementById('demoPause');
-const demoFinish=document.getElementById('demoFinish');
-const demoStatus=document.getElementById('demoStatus');
-const demoZoom=document.getElementById('demoZoom');
-
-let demo={orig:130, cur:130, left:[130], right:[], scale:1.2, timer:null};
-
-function resetDemo(msg="Klar."){
-  const n=+demoN.value||130;
-  demo={orig:n, cur:n, left:[n], right:[], scale:(+demoZoom.value)/100, timer:null};
-  drawLadder(demoCanvas, demo.left, demo.right, demo.scale);
-  demoStatus.textContent=msg;
-}
-function ensureDemoValid(){
-  let n=+demoN.value||130;
-  if(hasPrimeFactorAbove(n,13)){
-    n=randomValidDemoNumber();
-    demoN.value=n;
-    resetDemo(`Tallet hadde en faktor > 13. Bytter til gyldig: ${n}.`);
-  }else{
-    resetDemo("Klar.");
-  }
-}
-function stepDemo(){
-  if(demo.cur<=1) return;
-  const p=smallestDiv(demo.cur);
-  if(p===demo.cur){
-    demo.right.push(p);
-    if(demo.left.at(-1)!==p) demo.left.push(p);
-    demo.cur=1;
-  }else{
-    demo.right.push(p);
-    demo.cur/=p;
-    demo.left.push(demo.cur);
-  }
-  drawLadder(demoCanvas, demo.left, demo.right, demo.scale);
-  if(demo.cur<=1){
-    demoStatus.innerHTML = `<span class="ok">Ferdig!</span> ${demo.orig} = ${demo.right.join(' · ')}`;
-    pauseAuto();
-  }else{
-    demoStatus.innerHTML = `${demo.left.at(-2)} deles på <b>${p}</b> → ${demo.cur}`;
-  }
-}
-function autoTick(){ if(demo.cur>1) stepDemo(); else pauseAuto(); }
-function startAuto(){ if(demo.timer) return; demo.timer=setInterval(autoTick,650); demoPause.disabled=false; }
-function pauseAuto(){ if(!demo.timer) return; clearInterval(demo.timer); demo.timer=null; demoPause.disabled=true; }
-
-demoStart.addEventListener('click', ensureDemoValid);
-demoReset.addEventListener('click', ()=> resetDemo("Nullstilt."));
-demoRand.addEventListener('click', ()=>{ demoN.value=randomValidDemoNumber(); resetDemo("Klar."); });
-demoStep.addEventListener('click', stepDemo);
-demoAuto.addEventListener('click', startAuto);
-demoPause.addEventListener('click', pauseAuto);
-demoFinish.addEventListener('click', ()=>{ while(demo.cur>1) stepDemo(); });
-demoZoom.addEventListener('input', e=>{ demo.scale=(+e.target.value)/100; drawLadder(demoCanvas, demo.left, demo.right, demo.scale); });
-resetDemo();
-
-/* ====== ØVING ====== */
-const pracCanvas=document.getElementById('pracCanvas');
-const pracN=document.getElementById('pracN');
-const pracRand=document.getElementById('pracRand');
-const pracStart=document.getElementById('pracStart');
-const pracReset=document.getElementById('pracReset');
-const pracStatus=document.getElementById('pracStatus');
-const choices=document.getElementById('choices');
-const customPrime=document.getElementById('customPrime');
-const checkCustom=document.getElementById('checkCustom');
-const giveHint=document.getElementById('giveHint');
-const giveAns=document.getElementById('giveAns');
-const pracResult=document.getElementById('pracResult');
-const scoreEl=document.getElementById('score');
-
-let prac={orig:130, cur:130, left:[130], right:[], score:0, first:true, scale:1.2};
-
-function resetPractice(){
-  const n=+pracN.value||130;
-  prac={orig:n, cur:n, left:[n], right:[], score:prac.score||0, first:true, scale:1.2};
-  drawLadder(pracCanvas, prac.left, prac.right, prac.scale);
-  pracResult.textContent='';
-  askNext();
-}
-function askNext(){
-  if(prac.cur<=1) return;
-  const s=smallestDiv(prac.cur);
-  pracStatus.innerHTML = (s===prac.cur)? `Siste steg – velg <b>${s}</b>.` : `Velg laveste primtall som deler <b>${prac.cur}</b>.`;
-  renderChoices(prac.cur);
-  prac.first=true;
-}
-function renderChoices(n){
-  choices.innerHTML='';
-  const cap=Math.max(29, Math.ceil(Math.sqrt(n))+30);
-  const primes=sievePrimes(cap).slice(0,50);
-  primes.forEach(p=>{
+const buildPrimeButtons=()=>{
+  buttonsBox.innerHTML='';
+  const ps=sievePrimes(200);
+  ps.forEach(p=>{
     const b=document.createElement('button');
     b.className='chip'; b.textContent=p;
-    b.addEventListener('click',()=> checkPrime(p));
-    choices.appendChild(b);
+    b.onclick=()=> checkPrime(p);
+    buttonsBox.appendChild(b);
   });
-  const spd=smallestDiv(n);
-  if(spd===n && !primes.includes(n)){
-    const b=document.createElement('button');
-    b.className='chip'; b.textContent=n;
-    b.addEventListener('click',()=> checkPrime(n));
-    choices.appendChild(b);
-  }
-}
-function correct(p){
-  if(p===prac.cur){
-    prac.right.push(p);
-    if(prac.left.at(-1)!==p) prac.left.push(p);
-    prac.cur=1;
-  }else{
-    prac.right.push(p);
-    prac.cur/=p;
-    prac.left.push(prac.cur);
-  }
-  drawLadder(pracCanvas, prac.left, prac.right, prac.scale);
-  prac.score += prac.first?2:1; scoreEl.textContent=prac.score;
-  if(prac.cur>1) askNext();
-  else{
-    pracStatus.innerHTML = `<span class="ok">Bra!</span> ${prac.orig} = ${prac.right.join(' · ')}`;
-    pracResult.innerHTML = `<div>Produktform: <b>${prac.right.join(' · ')}</b></div>
-                            <div>Med eksponenter: <b>${compress(prac.right)}</b></div>`;
-    choices.innerHTML='';
-  }
-}
-function checkPrime(g){
-  if(prac.cur<=1) return;
-  if(prac.cur%g!==0){ pracStatus.innerHTML=`<span class="bad">Nei.</span> ${g} deler ikke ${prac.cur}.`; prac.first=false; return; }
-  const s=smallestDiv(prac.cur);
-  if(g!==s){ pracStatus.innerHTML=`<span class="bad">Nesten.</span> ${g} deler ${prac.cur}, men <b>${s}</b> er lavere.`; prac.first=false; return; }
-  pracStatus.innerHTML=`<span class="ok">Riktig!</span> Del på ${g}.`; correct(g);
-}
-/* Øving events */
-pracStart.addEventListener('click', resetPractice);
-pracReset.addEventListener('click', resetPractice);
-pracRand.addEventListener('click', ()=>{ pracN.value = Math.floor(10+Math.random()*40000); resetPractice(); });
-checkCustom.addEventListener('click', ()=>{ const v=+customPrime.value; if(!v) return; checkPrime(v); customPrime.value=''; });
-customPrime.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); checkCustom.click(); }});
-giveHint.addEventListener('click', ()=>{ const s=smallestDiv(prac.cur); pracStatus.innerHTML=`Hint: Sjekk <b>${s<=11?s:'2, 3, 5, 7, 11 …'}</b>.`; prac.first=false; });
-giveAns.addEventListener('click', ()=>{ const s=smallestDiv(prac.cur); checkPrime(s); });
+};
+const checkPrime=(g)=>{
+  if(state.cur<=1) return;
+  if(state.cur%g!==0){ statusEl.innerHTML=`<span class="bad">${g} deler ikke ${state.cur}.</span>`; return; }
+  const s=smallestDiv(state.cur);
+  if(g!==s){ statusEl.innerHTML=`<span class="bad">Nesten. ${g} deler ${state.cur}, men <b>${s}</b> er lavere.</span>`; return; }
 
-/* Init */
-resetPractice();
+  state.right.push(g);
+  if(g===state.cur){
+    if(state.left.at(-1)!==g) state.left.push(g);
+    state.cur=1;
+  }else{
+    state.cur/=g;
+    state.left.push(state.cur);
+  }
+  renderLadder(state.left,state.right);
+
+  if(state.cur>1){
+    statusEl.innerHTML=`<span class="ok">Riktig!</span> Del på ${g}. Fortsett.`;
+  }else{
+    statusEl.innerHTML=`<span class="ok">Ferdig!</span>`;
+    resultEl.innerHTML = `${state.orig} = <b>${state.right.join(' · ')}</b>`;
+  }
+};
+btnCheck.onclick=()=>{ const v=+primeGuess.value; if(!v) return; checkPrime(v); primeGuess.value=''; primeGuess.focus(); };
+primeGuess.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); btnCheck.click(); }});
+useButtons.onchange=()=>{
+  const on=useButtons.checked;
+  buttonsBox.style.display = on? 'flex':'none';
+  manualBox.style.display  = on? 'none':'flex';
+};
+btnStart.onclick=resetFactor;
+btnReset.onclick=resetFactor;
+btnRandom.onclick=()=>{ nInput.value = Math.floor(10+Math.random()*50000); resetFactor(); };
+resetFactor();
+
+/* ====== FANE 2: Primtall-sil 1–100 ====== */
+const gridEl = document.getElementById('grid');
+const primeRow = document.getElementById('primeRow');
+const sieveMsg = document.getElementById('sieveMsg');
+const resetSieve = document.getElementById('resetSieve');
+
+let sieve = {selected:[], struck:new Set(), done:false};
+const primes100 = sievePrimes(100);
+const bases = [2,3,5,7]; // nok for 1–100
+
+const buildGrid=()=>{
+  gridEl.innerHTML=''; sieve.struck.clear(); sieve.done=false; sieve.selected=[];
+  for(let i=1;i<=100;i++){
+    const c=document.createElement('div');
+    c.className='cell100'; c.dataset.n=i; c.textContent=i;
+    gridEl.appendChild(c);
+  }
+  buildPrimeButtonsRow();
+  sieveMsg.textContent='Start med 2, deretter 3, 5, 7.';
+};
+const buildPrimeButtonsRow=()=>{
+  primeRow.innerHTML='';
+  primes100.forEach(p=>{
+    const b=document.createElement('button'); b.className='pbtn'; b.textContent=p; b.dataset.p=p;
+    b.onclick=()=> clickPrime(p,b);
+    if(sieve.done) b.disabled=true;
+    primeRow.appendChild(b);
+  });
+};
+const clickPrime=(p,btn)=>{
+  if(sieve.done) return;
+  btn.classList.add('active');
+  // stryk alle multiplene av p (unntatt p selv)
+  let anyStruck=false;
+  for(const cell of gridEl.children){
+    const n=+cell.dataset.n;
+    if(n!==p && n%p===0 && !cell.classList.contains('struck')){
+      cell.classList.add('struck'); sieve.struck.add(n); anyStruck=true;
+    }
+  }
+  if(!sieve.selected.includes(p)) sieve.selected.push(p);
+
+  // Sjekk ferdig: se bare på gjenværende n>=2
+  const remaining2 = [...gridEl.children]
+    .map(c=>+c.dataset.n)
+    .filter(n=>n>=2 && !sieve.struck.has(n));
+
+  const allPrime = remaining2.every(n => isPrime(n));
+  const usedAllBases = bases.every(b => sieve.selected.includes(b));
+
+  if(allPrime || usedAllBases){
+    finishSieve();  // marker ferdig på en tydelig måte
+    return;
+  }
+
+  // Oppdater beskjed
+  if(!anyStruck){
+    const next = nextSuggestion();
+    sieveMsg.innerHTML = `Ingen nye tall kunne strykes med ${p}. ${next}`;
+  }else{
+    sieveMsg.textContent = nextSuggestion();
+  }
+};
+function finishSieve(){
+  if(sieve.done) return;
+  sieve.done = true;
+
+  // Marker alle gjenværende primtall med “gull-pop”
+  for(const cell of gridEl.children){
+    const n=+cell.dataset.n;
+    if(n>=2 && !cell.classList.contains('struck') && isPrime(n)){
+      // restart animasjon ved å fjerne/force reflow/legge til klasse
+      cell.classList.remove('prime-final');
+      void cell.offsetWidth; // reflow hack
+      cell.classList.add('prime-final');
+    }
+  }
+  // Deaktiver knapper
+  for(const b of primeRow.children){ b.disabled=true; }
+
+  sieveMsg.innerHTML = `<span class="ok">Ferdig!</span> Vi kan ikke stryke flere tall. De som “popper” og lyser i gull er <b>alle primtallene under 100</b>.`;
+}
+const nextSuggestion=()=> {
+  const used=new Set(sieve.selected);
+  // foreslå neste av 2,3,5,7 først, deretter resten
+  const order=[2,3,5,7,...primes100.filter(p=>p>7)];
+  const next = order.find(x=>!used.has(x));
+  return next? `Prøv ${next} neste.` : 'Alle baser er brukt.';
+};
+
+resetSieve.onclick=()=>{
+  buildGrid();
+};
+
+buildGrid();
+
+/* ====== FANE-NAV ====== */
+const tabFactor=document.getElementById('tab-factor');
+const tabSieve =document.getElementById('tab-sieve');
+const panelFactor=document.getElementById('panel-factor');
+const panelSieve =document.getElementById('panel-sieve');
+tabFactor.onclick=()=>{tabFactor.setAttribute('aria-selected',true);tabSieve.setAttribute('aria-selected',false);panelFactor.setAttribute('aria-hidden',false);panelSieve.setAttribute('aria-hidden',true);}
+tabSieve.onclick =()=>{tabFactor.setAttribute('aria-selected',false);tabSieve.setAttribute('aria-selected',true);panelFactor.setAttribute('aria-hidden',true);panelSieve.setAttribute('aria-hidden',false);}
 </script>
 </body>
 </html>
